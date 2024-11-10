@@ -1,0 +1,16 @@
+/.vscode
+# Build directories
+build/
+log/
+install/
+
+# All src packages except mtc_tutorial and hello_moveit
+src/launch_param_builder/
+src/moveit2/
+src/moveit2_tutorials/
+src/moveit_env/
+src/moveit_resources/
+src/moveit_task_constructor/
+src/moveit_visual_tools/
+src/rosparam_shortcuts/
+src/srdfdom/

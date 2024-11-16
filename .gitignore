@@ -14,3 +14,5 @@ src/moveit_task_constructor/
 src/moveit_visual_tools/
 src/rosparam_shortcuts/
 src/srdfdom/
+src/Universal_Robots_ROS2_Driver/
+src/Universal_Robots_ROS2_GZ_Simulation/

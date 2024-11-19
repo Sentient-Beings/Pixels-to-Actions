@@ -16,3 +16,7 @@ src/rosparam_shortcuts/
 src/srdfdom/
 src/Universal_Robots_ROS2_Driver/
 src/Universal_Robots_ROS2_GZ_Simulation/
+src/Universal_Robots_ROS2_Description/
+src/ros2_robotiq_gripper/
+src/ur5e_joystick_control
+src/mtc_tutorial

@@ -20,3 +20,6 @@ src/Universal_Robots_ROS2_Description/
 src/ros2_robotiq_gripper/
 src/ur5e_joystick_control
 src/mtc_tutorial.venv/
+robosuite/
+.venv
+src/

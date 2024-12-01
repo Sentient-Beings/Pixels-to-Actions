@@ -19,4 +19,4 @@ src/Universal_Robots_ROS2_GZ_Simulation/
 src/Universal_Robots_ROS2_Description/
 src/ros2_robotiq_gripper/
 src/ur5e_joystick_control
-src/mtc_tutorial
+src/mtc_tutorial.venv/

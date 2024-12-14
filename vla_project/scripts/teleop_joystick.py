@@ -32,15 +32,22 @@ Examples:
         $ python demo_device_control.py --environment PickPlaceCan --robots Sawyer --controller osc
 """
 
+# Basic imports
 import argparse
 import time
-
 import numpy as np
+import cv2
 
+# Robosuite imports
 import robosuite as suite
 from robosuite import load_composite_controller_config
+import robosuite.macros as macros
 from robosuite.controllers.composite.composite_controller import WholeBody
 from robosuite.wrappers import VisualizationWrapper
+
+# Set the image convention to opencv so that the images are automatically rendered "right side up" when using imageio
+# (which uses opencv convention)
+macros.IMAGE_CONVENTION = "opencv"
 
 if __name__ == "__main__":
 
@@ -63,6 +70,10 @@ if __name__ == "__main__":
         type=int,
         help="Sleep when simluation runs faster than specified frame rate; 20 fps is real time.",
     )
+    parser.add_argument("--camera", type=str, default="frontview", help="Name of camera to render")
+    parser.add_argument("--height", type=int, default=512)
+    parser.add_argument("--width", type=int, default=512)
+    parser.add_argument("--skip_frame", type=int, default=1)
     args = parser.parse_args()
 
     # Get controller config
@@ -87,14 +98,16 @@ if __name__ == "__main__":
     # Create environment
     env = suite.make(
         **config,
-        has_renderer=True,
-        has_offscreen_renderer=False,
-        render_camera="agentview",
-        ignore_done=True,
-        use_camera_obs=False,
-        reward_shaping=True,
+        has_renderer=False,
         control_freq=20,
-        hard_reset=False,
+        render_camera=args.camera,
+        has_offscreen_renderer=True,
+        ignore_done=True,
+        use_camera_obs=True,
+        use_object_obs=False,
+        camera_names=args.camera,
+        camera_heights=args.height,
+        camera_widths=args.width,
     )
 
     # Wrap this environment in a visualization wrapper
@@ -112,13 +125,7 @@ if __name__ == "__main__":
         raise Exception("Invalid device choice: only 'joystick' is supported")
 
     while True:
-        # Reset the environment
         obs = env.reset()
-
-        # Setup rendering
-        cam_id = 0
-        num_cam = len(env.sim.model.camera_names)
-        env.render()
 
         # Initialize variables that should the maintained between resets
         last_grasp = 0
@@ -133,7 +140,6 @@ if __name__ == "__main__":
             }
             for robot in env.robots
         ]
-
         # Loop until we get a reset from the input or the task completes
         while True:
             start = time.time()
@@ -172,8 +178,13 @@ if __name__ == "__main__":
             for gripper_ac in all_prev_gripper_actions[device.active_robot]:
                 all_prev_gripper_actions[device.active_robot][gripper_ac] = action_dict[gripper_ac]
 
-            env.step(env_action)
-            env.render()
+            obs, reward, done, info = env.step(env_action)
+            frame = obs[args.camera + "_image"]
+            # Ensure stable orientation
+            if frame is not None:
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                cv2.imshow("Robot Camera", frame)
+                key = cv2.waitKey(1) 
 
             # limit frame rate if necessary
             if args.max_fr is not None:

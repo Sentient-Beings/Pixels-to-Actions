@@ -38,7 +38,7 @@ import time
 import numpy as np
 import cv2
 import threading 
-from queue import Queue
+from queue import Queue, Empty
 import redis
 
 # Robosuite imports
@@ -87,7 +87,7 @@ class ImagePublisher:
                     print(f"Retrying in {self.connection_retry_delay} seconds...")
                     time.sleep(self.connection_retry_delay)
                 self.redis_client = None
-                e
+                
             except Exception as e:
                 print(f"Unexpected error while connecting to Redis: {e}")
                 retries += 1
@@ -108,16 +108,12 @@ class ImagePublisher:
                 # Get frame from queue with timeout
                 try:
                     frame = self.frame_queue.get(timeout=1.0)
-                    print("Got frame from queue")
-                    print(frame.shape)
-                except Queue.Empty:
-                    print("No frame in queue")
+                except Empty:
                     continue
 
                 # Convert image to JPEG format
                 success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
                 if not success:
-                    print("Failed to encode image")
                     continue
 
                 img_bytes = buffer.tobytes()
@@ -142,8 +138,6 @@ class ImagePublisher:
 
             except Exception as e:
                 print(f"Error in publish loop: {e}")
-                # Delay before retry
-                time.sleep(0.1)  
     
     def start(self):
         if not self.running:
@@ -154,7 +148,6 @@ class ImagePublisher:
             print("Publisher started")
 
     def stop(self):
-        print("Stopping publisher...")
         self.running = False
         if self.publish_thread:
             self.publish_thread.join(timeout=5.0)
@@ -171,11 +164,10 @@ class ImagePublisher:
         try:
             if self.frame_queue.full():
                 try:
-                    self.frame_queue.get_nowait()  # Remove old frame
-                except Queue.Empty:
+                    self.frame_queue.get_nowait() 
+                except Empty:
                     pass
             self.frame_queue.put_nowait(frame)
-            print("Frame queued")
         except Exception as e:
             print(f"Error queuing frame: {e}")
 
@@ -329,4 +321,4 @@ if __name__ == "__main__":
                     time.sleep(diff)     
         # Cleanup
         cv2.destroyAllWindows()
-        image_publisher.stop()     
+        # image_publisher.stop()     

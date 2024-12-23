@@ -9,6 +9,7 @@ import time
 
 MAX_FR = 25
 POSITION_THRESHOLD = 0.02 # 2cm threshold
+ORIENTATION_THRESHOLD = 0.1 # 5.72958 degrees threshold
 MAX_EXECUTION_TIME = 5.0  # Maximum time to wait for reaching target position
 
 def quat2euler(q: np.ndarray) -> np.ndarray:
@@ -56,6 +57,17 @@ def is_position_reached(target_delta, current_delta):
     else:
         return False
 
+def is_orientation_reached(target_delta, current_delta):
+    """
+    Check if norm(target_delta) and norm(current_delta) are within a certain threshold.
+
+    return True or False
+    """
+    if np.abs(np.linalg.norm(target_delta) - np.linalg.norm(current_delta)) < ORIENTATION_THRESHOLD:
+        return True
+    else:
+        return False
+
 if __name__ == "__main__":
     robot = "UR5e"  
     env = suite.make(
@@ -75,25 +87,29 @@ if __name__ == "__main__":
     
     print(f"Controlling {robot} robot with {action_space_dim} DOF")
 
-    # Read test positions from file
-    test_positions = []
-    with open("test_positions.txt", "r") as f:
+    poses = []
+    with open("poses.txt", "r") as f:
         for line in f:
-            if line.startswith("#") or not line.strip():
+            line = line.strip()
+            if not line or line.startswith('#'):
                 continue
-            values = [float(x) for x in line.strip().split()]
-            if len(values) == action_space_dim:
-                test_positions.append(values)
+            try:
+                values = [float(x) for x in line.split()]
+                if len(values) == action_space_dim:
+                    poses.append(values)
+            except ValueError:
+                print(f"Skipping invalid line: {line}")
+                continue
 
-    print(f"Loaded {len(test_positions)} test positions")
-
-    try:
-        for position_idx, action_space in enumerate(test_positions):
-            print(f"\nExecuting movement {position_idx + 1}/{len(test_positions)}")
+    print(f"Loaded {len(poses)} test orientations")
+    
+    try:        
+        for pos_idx, action_space in enumerate(poses):
+            print(f"\nExecuting movement {pos_idx + 1}/{len(poses)}")
             action_space = np.array(action_space)
             control_space = actual_delta(action_space)  # Convert action space to control space
             initial_state_set = False
-
+            
             while True:
                 # env expects action space, it internally maps the action space -> control space
                 observations, reward, done, info = env.step(action_space)
@@ -101,23 +117,26 @@ if __name__ == "__main__":
 
                 if not initial_state_set:
                     initial_eef_position = observations['robot0_eef_pos']
+                    initial_eef_orientation = observations['robot0_eef_quat']
                     initial_state_set = True
                     start_time = time.time()
                     continue
 
                 eef_position = observations['robot0_eef_pos']
                 pos_difference = eef_position - initial_eef_position
+
+                eef_orientation = observations['robot0_eef_quat']
+                ori_difference = quat2euler(eef_orientation) - quat2euler(initial_eef_orientation)
                 
-                print("-------------------------------------------------------------")
-                print(f"Current EEF Position: {np.round(eef_position, 3)}")
-                print(f"Position Difference between current and initial : {np.round(pos_difference, 3)}")
-                print(f"Position Difference that is required: {np.round(control_space[:3], 3)}")
-                print("-------------------------------------------------------------")
+                # print("-------------------------------------------------------------")
+                # print(f"Current EEF Position: {np.round(eef_position, 3)}")
+                # print(f"Position Difference between current and initial : {np.round(pos_difference, 3)}")
+                # print(f"Position Difference that is required: {np.round(control_space[:3], 3)}")
+                # print("-------------------------------------------------------------")
 
                 elapsed_time = time.time() - start_time
 
-                # Check if position reached target or timeout occurred
-                if is_position_reached(control_space[:3], pos_difference):
+                if is_position_reached(control_space[:3], pos_difference) and is_orientation_reached(control_space[3:], ori_difference):
                     break
                 elif elapsed_time > MAX_EXECUTION_TIME:
                     print(f"Timeout reached after {elapsed_time:.2f} seconds")

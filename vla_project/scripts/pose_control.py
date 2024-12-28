@@ -6,6 +6,7 @@ from robosuite.utils.input_utils import *
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import time
+import argparse
 
 MAX_FR = 25
 POSITION_THRESHOLD = 0.02 # 2cm threshold
@@ -46,7 +47,7 @@ def actual_delta(vec : np.ndarray) -> np.ndarray:
 
     return np.concatenate((actual_pos_delta, actual_ori_delta, actual_gripper_delta))
 
-def is_position_reached(target_delta, current_delta):
+def is_position_reached(target_delta, current_delta) -> bool:
     """
     Check if norm(target_delta) and norm(current_delta) are within a certain threshold.
 
@@ -57,7 +58,7 @@ def is_position_reached(target_delta, current_delta):
     else:
         return False
 
-def is_orientation_reached(target_delta, current_delta):
+def is_orientation_reached(target_delta, current_delta) -> bool:
     """
     Check if norm(target_delta) and norm(current_delta) are within a certain threshold.
 
@@ -69,10 +70,18 @@ def is_orientation_reached(target_delta, current_delta):
         return False
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Robot pose control from file')
+    parser.add_argument('--pose_file', type=str, help='Path to the poses file', default="poses.txt")
+    parser.add_argument('--debug', type=bool, default=False)
+    args = parser.parse_args()
+
     robot = "UR5e"  
+    controller_config = load_composite_controller_config(controller="BASIC", robot=[robot])
+
     env = suite.make(
         env_name = "Lift",
         robots=[robot],
+        controller_configs=controller_config,
         gripper_types="default", 
         has_renderer=True,
         has_offscreen_renderer=False,
@@ -86,9 +95,12 @@ if __name__ == "__main__":
     env.viewer.set_camera(camera_id=0)
     
     print(f"Controlling {robot} robot with {action_space_dim} DOF")
+    # Get the robot action space info 
+    robot = env.robots[0]
+    robot.print_action_info()
 
     poses = []
-    with open("poses.txt", "r") as f:
+    with open(args.pose_file, "r") as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith('#'):
@@ -100,7 +112,6 @@ if __name__ == "__main__":
             except ValueError:
                 print(f"Skipping invalid line: {line}")
                 continue
-
     print(f"Loaded {len(poses)} test orientations")
     
     try:        
@@ -108,6 +119,9 @@ if __name__ == "__main__":
             print(f"\nExecuting movement {pos_idx + 1}/{len(poses)}")
             action_space = np.array(action_space)
             control_space = actual_delta(action_space)  # Convert action space to control space
+            if args.debug:
+                print(f"Action Space: {action_space}")
+                print(f"Control Space: {control_space}")
             initial_state_set = False
             
             while True:
@@ -128,15 +142,19 @@ if __name__ == "__main__":
                 eef_orientation = observations['robot0_eef_quat']
                 ori_difference = quat2euler(eef_orientation) - quat2euler(initial_eef_orientation)
                 
-                # print("-------------------------------------------------------------")
-                # print(f"Current EEF Position: {np.round(eef_position, 3)}")
-                # print(f"Position Difference between current and initial : {np.round(pos_difference, 3)}")
-                # print(f"Position Difference that is required: {np.round(control_space[:3], 3)}")
-                # print("-------------------------------------------------------------")
+                if args.debug:
+                    print("-------------------------------------------------------------")
+                    print(f"Current EEF Position: {np.round(eef_position, 3)}")
+                    print(f"Position Difference between current and initial : {np.round(pos_difference, 3)}")
+                    print(f"Position Difference that is required: {np.round(control_space[:3], 3)}")
+                    print(f"Current EEF Orientation: {np.round(eef_orientation, 3)}")
+                    print(f"Orientation Difference between current and initial : {np.round(ori_difference, 3)}")
+                    print(f"Orientation Difference that is required: {np.round(control_space[3:6], 3)}")
+                    print("-------------------------------------------------------------")
 
                 elapsed_time = time.time() - start_time
 
-                if is_position_reached(control_space[:3], pos_difference) and is_orientation_reached(control_space[3:], ori_difference):
+                if is_position_reached(control_space[:3], pos_difference) and is_orientation_reached(control_space[3:6], ori_difference):
                     break
                 elif elapsed_time > MAX_EXECUTION_TIME:
                     print(f"Timeout reached after {elapsed_time:.2f} seconds")

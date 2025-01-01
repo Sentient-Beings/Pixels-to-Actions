@@ -1,17 +1,20 @@
-from mimetypes import init
-from turtle import pos
-import robosuite as suite
-from robosuite.controllers import load_composite_controller_config
-from robosuite.utils.input_utils import *
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import time
 import argparse
 
+import robosuite as suite
+from robosuite.controllers import load_composite_controller_config
+from robosuite.utils.input_utils import *
+from robosuite.utils.camera_utils import CameraMover
+
+import xml.etree.ElementTree as ET
+
 MAX_FR = 25
 POSITION_THRESHOLD = 0.02 # 2cm threshold
 ORIENTATION_THRESHOLD = 0.1 # 5.72958 degrees threshold
 MAX_EXECUTION_TIME = 5.0  # Maximum time to wait for reaching target position
+DEFAULT_CAMERA_POS = np.array([0.7, 0, 1.55])
 
 def quat2euler(q: np.ndarray) -> np.ndarray:
     '''
@@ -69,6 +72,12 @@ def is_orientation_reached(target_delta, current_delta) -> bool:
     else:
         return False
 
+def denormalize(vec: np.ndarray) -> np.ndarray:
+    """
+    Denormalize the vector output from VLA 
+    """
+    pass
+        
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Robot pose control from file')
     parser.add_argument('--pose_file', type=str, help='Path to the poses file', default="poses.txt")
@@ -89,16 +98,27 @@ if __name__ == "__main__":
         use_camera_obs=False,
         control_freq=20,
     )
-    # env spec: [-1. -1. -1. -1. -1. -1. -1.] - [1. 1. 1. 1. 1. 1. 1.]
-    action_space_dim = env.action_dim # 7
     env.reset()
-    env.viewer.set_camera(camera_id=0)
-    
-    print(f"Controlling {robot} robot with {action_space_dim} DOF")
-    # Get the robot action space info 
-    robot = env.robots[0]
-    robot.print_action_info()
 
+    # get camera specs 
+    cam_tree = ET.Element("camera", attrib={"name": "agentview"})
+    CAMERA_NAME = cam_tree.get("name")
+    camera_mover = CameraMover(
+        env=env,
+        camera=CAMERA_NAME,
+    )
+    camera_id = env.sim.model.camera_name2id(CAMERA_NAME)
+    env.viewer.set_camera(camera_id=camera_id)
+    # get initial camera pose 
+    initial_file_camera_pos, initial_file_camera_quat = camera_mover.get_camera_pose()
+    
+    if args.debug:
+        action_space_dim = env.action_dim # 7
+        print(f"Controlling {robot} robot with {action_space_dim} DOF")
+        robot = env.robots[0]
+        robot.print_action_info()
+
+    # Reading from file: this will be replaced with VLA
     poses = []
     with open(args.pose_file, "r") as f:
         for line in f:
@@ -125,6 +145,7 @@ if __name__ == "__main__":
             initial_state_set = False
             
             while True:
+                camera_mover.set_camera_pose(pos=DEFAULT_CAMERA_POS, quat=initial_file_camera_quat)
                 # env expects action space, it internally maps the action space -> control space
                 observations, reward, done, info = env.step(action_space)
                 env.render()

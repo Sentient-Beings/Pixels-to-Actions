@@ -4,17 +4,20 @@ import time
 import argparse
 
 import robosuite as suite
-from robosuite.controllers import load_composite_controller_config
-from robosuite.utils.input_utils import *
-from robosuite.utils.camera_utils import CameraMover
+from   robosuite.controllers import load_composite_controller_config
+from   robosuite.utils.input_utils import *
+from   robosuite.utils.camera_utils import CameraMover
 
 import xml.etree.ElementTree as ET
 
 MAX_FR = 25
-POSITION_THRESHOLD = 0.02 # 2cm threshold
-ORIENTATION_THRESHOLD = 0.1 # 5.72958 degrees threshold
-MAX_EXECUTION_TIME = 5.0  # Maximum time to wait for reaching target position
-DEFAULT_CAMERA_POS = np.array([0.7, 0, 1.55])
+# Following thresholds are set to determine if the robot is close enough to the target 
+POSITION_THRESHOLD = 0.02  # units meter
+ORIENTATION_THRESHOLD = 0.1 
+# Maximum time to wait for reaching target position
+MAX_EXECUTION_TIME = 5.0  
+# x, y, z position. This is sorta imp for VLA since, it expects the image to be captured from a certain position 
+DEFAULT_CAMERA_POS = np.array([0.7, 0, 1.6])  
 
 def quat2euler(q: np.ndarray) -> np.ndarray:
     '''
@@ -112,8 +115,8 @@ if __name__ == "__main__":
     # get initial camera pose 
     initial_file_camera_pos, initial_file_camera_quat = camera_mover.get_camera_pose()
     
+    action_space_dim = env.action_dim # 7
     if args.debug:
-        action_space_dim = env.action_dim # 7
         print(f"Controlling {robot} robot with {action_space_dim} DOF")
         robot = env.robots[0]
         robot.print_action_info()

@@ -37,10 +37,6 @@ import argparse
 import time
 import numpy as np
 import cv2
-import threading 
-from queue import Queue, Empty
-import redis
-
 # Robosuite imports
 import robosuite as suite
 from robosuite import load_composite_controller_config
@@ -48,128 +44,12 @@ import robosuite.macros as macros
 from robosuite.controllers.composite.composite_controller import WholeBody
 from robosuite.wrappers import VisualizationWrapper
 
+# Redis Image Publisher
+from imagepub import ImagePublisher
+
 # Set the image convention to opencv so that the images are automatically rendered "right side up" when using imageio
 # (which uses opencv convention)
 macros.IMAGE_CONVENTION = "opencv"
-
-class ImagePublisher:
-    def __init__(self, redis_host="localhost", redis_port=6379):
-        self.redis_host = redis_host
-        self.redis_port = redis_port
-        self.redis_client = None
-        self.frame_queue = Queue(maxsize=1)
-        self.running = False
-        self.publish_thread = None
-        self.connection_retry_delay = 1
-        self.max_retries = 5
-
-    def connect_redis(self):
-        retries = 0
-        while retries < self.max_retries and self.running:
-            try:
-                if self.redis_client is None or not self.redis_client.ping():
-                    print(f"Attempting to connect to Redis (attempt {retries + 1}/{self.max_retries})...")
-                    self.redis_client = redis.Redis(
-                        host=self.redis_host, 
-                        port=self.redis_port,
-                        socket_keepalive=True,
-                        socket_connect_timeout=5,
-                        retry_on_timeout=True
-                    )
-                    self.redis_client.ping()
-                    print("Successfully connected to Redis!")  
-                return True
-            
-            except redis.ConnectionError as e:
-                print(f"Redis connection failed: {e}")
-                retries += 1
-                if retries < self.max_retries:
-                    print(f"Retrying in {self.connection_retry_delay} seconds...")
-                    time.sleep(self.connection_retry_delay)
-                self.redis_client = None
-                
-            except Exception as e:
-                print(f"Unexpected error while connecting to Redis: {e}")
-                retries += 1
-                if retries < self.max_retries:
-                    time.sleep(self.connection_retry_delay)
-                self.redis_client = None
-                
-        return False    
-
-    def publish_loop(self):
-        while self.running:
-            try:
-                if not self.connect_redis():
-                    print("Failed to connect to Redis after multiple attempts")
-                    time.sleep(self.connection_retry_delay)
-                    continue
-
-                # Get frame from queue with timeout
-                try:
-                    frame = self.frame_queue.get(timeout=1.0)
-                except Empty:
-                    continue
-
-                # Convert image to JPEG format
-                success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                if not success:
-                    continue
-
-                img_bytes = buffer.tobytes()
-
-                # Add frame dimensions
-                height, width = frame.shape[:2]
-                metadata = f"{width},{height}|".encode()
-
-                # Publish the image
-                try:
-                    self.redis_client.publish("image_channel", metadata + img_bytes)
-                except redis.ConnectionError as e:
-                    print(f"Lost connection to Redis: {e}")
-                    # Force reconnection
-                    self.redis_client = None  
-                    continue
-                except Exception as e:
-                    print(f"Error publishing image: {e}")
-                    continue
-                # Small delay to prevent CPU overload
-                time.sleep(0.01) 
-
-            except Exception as e:
-                print(f"Error in publish loop: {e}")
-    
-    def start(self):
-        if not self.running:
-            self.running = True
-            self.publish_thread = threading.Thread(target=self.publish_loop)
-            self.publish_thread.daemon = True
-            self.publish_thread.start()
-            print("Publisher started")
-
-    def stop(self):
-        self.running = False
-        if self.publish_thread:
-            self.publish_thread.join(timeout=5.0)
-        if self.redis_client:
-            try:
-                self.redis_client.close()
-            except:
-                pass
-        print("Publisher stopped")
-
-    def publish_frame(self, frame):
-        if frame is None:
-            return
-        try:
-            if self.frame_queue.full():
-                try:
-                    self.frame_queue.get_nowait() 
-                except Empty:
-                    pass
-            self.frame_queue.put_nowait(frame)
-        except Exception as e:
-            print(f"Error queuing frame: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -321,4 +201,3 @@ if __name__ == "__main__":
                     time.sleep(diff)     
         # Cleanup
         cv2.destroyAllWindows()
-        # image_publisher.stop()     

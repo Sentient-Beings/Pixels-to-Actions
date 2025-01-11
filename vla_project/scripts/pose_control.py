@@ -120,28 +120,14 @@ if __name__ == "__main__":
         print(f"Controlling {robot} robot with {action_space_dim} DOF")
         robot = env.robots[0]
         robot.print_action_info()
-
-    # Reading from file: this will be replaced with VLA
-    poses = []
-    with open(args.pose_file, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            try:
-                values = [float(x) for x in line.split()]
-                if len(values) == action_space_dim:
-                    poses.append(values)
-            except ValueError:
-                print(f"Skipping invalid line: {line}")
-                continue
-    print(f"Loaded {len(poses)} test orientations")
     
     try:        
-        for pos_idx, action_space in enumerate(poses):
-            print(f"\nExecuting movement {pos_idx + 1}/{len(poses)}")
+        while True:
+            # Here: Get the action token from the VLA 
+            
             action_space = np.array(action_space)
-            control_space = actual_delta(action_space)  # Convert action space to control space
+            # Convert action space to control space
+            control_space = actual_delta(action_space)  
             if args.debug:
                 print(f"Action Space: {action_space}")
                 print(f"Control Space: {control_space}")

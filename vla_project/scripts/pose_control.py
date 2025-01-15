@@ -9,6 +9,7 @@ from   robosuite.utils.input_utils import *
 from   robosuite.utils.camera_utils import CameraMover
 
 import xml.etree.ElementTree as ET
+from vla import VLAInference
 
 MAX_FR = 25
 # Following thresholds are set to determine if the robot is close enough to the target 
@@ -124,6 +125,7 @@ if __name__ == "__main__":
     try:        
         while True:
             # Here: Get the action token from the VLA 
+            # TODO : get the cam image -> 224x224x3 -> send it to VLA -> get the action token
             
             action_space = np.array(action_space)
             # Convert action space to control space

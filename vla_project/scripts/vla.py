@@ -131,38 +131,5 @@ class VLAInference:
         
         logger.debug(f"Decoded actions: {pred_actions}")
         return pred_actions.tolist()
-    
-    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
-        """
-        Preprocess the input image to match model requirements (256x256x3).
-        
-        Args:
-            image: Input image as numpy array of any size
-        Returns:
-            np.ndarray: Resized image of shape (256, 256, 3)
-        Raises:
-            ValueError: If input image is invalid or doesn't have 3 channels
-        """
-        try:
-            if not isinstance(image, np.ndarray):
-                raise ValueError("Input must be a numpy array")
-            
-            if len(image.shape) != 3:
-                raise ValueError("Image must have 3 dimensions (H, W, C)")
-
-            if image.shape[2] != 3:
-                raise ValueError("Image must have 3 channels (RGB)")
-            
-            # Model expects 256x256x3 image
-            target_size = (256, 256)
-            resized_image = resize(image, target_size, interpolation=INTER_LINEAR)
-            resized_image = resized_image.astype(np.float32)
-            
-            logger.debug(f"Preprocessed image shape: {resized_image.shape}")
-            return resized_image
-            
-        except Exception as e:
-            logger.error(f"Image preprocessing failed: {e}")
-            raise
 
     

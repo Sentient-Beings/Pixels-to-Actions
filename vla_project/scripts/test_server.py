@@ -4,6 +4,9 @@ from vla import VLAInference
 import logging
 
 def test_vla_server():
+    '''
+    This script is used to test the VLA server, run this before executing the pixel_to_action.py script.
+    '''
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 

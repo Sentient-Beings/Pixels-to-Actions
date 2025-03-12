@@ -1,6 +1,6 @@
 ''' 
 This script provides a class for VLA inference, the model itself is hosted on a remote server. 
-We will be using Runpod to host the model. If you want to run it locally, strip the server calls from this script and link the model locally.
+Runpod is used to host the model. If you want to run it locally, strip the server calls from this script and link the model locally.
 The server deploys the model (through HF AutoClass API) over REST API.
 '''
 from typing import List, Optional, Union
@@ -21,18 +21,18 @@ json_numpy.patch()
 SERVER_LOC = "http://0.0.0.0:8000/act"
 
 class VLAInference:
+    """
+    Initialize the VLA inference client.
+    Args:
+        model: Model identifier string
+        max_images: Maximum number of images to process
+        instruction: Default instruction if none provided
+    """
     def __init__(self, 
                  model: str = 'openvla/openvla-7b',
                  max_images: int = 1,
                  instruction: str = 'stop',
                  **kwargs):
-        """
-        Initialize the VLA inference client.
-        Args:
-            model: Model identifier string
-            max_images: Maximum number of images to process
-            instruction: Default instruction if none provided
-        """
         if not isinstance(model, str):
             raise TypeError("model must be a string")
         
@@ -111,7 +111,8 @@ class VLAInference:
     
     def decode_action(self, token: Optional[List[int]]) -> Optional[List[float]]:
         """
-        Decode the token response into action values.
+        Decode the token response into action values. 
+        Read the OPENVLA paper and visit the NANOLLM github repo for more details on why/how decoding is done. 
         Args:
             token: List of token indices from the model
         Returns:

@@ -32,7 +32,6 @@ class VisionToAction(Node):
                 if message and message['type'] == 'message':
                     data = message['data']
                     
-                    # Split metadata and image data
                     metadata_end = data.find(b'|')
                     if metadata_end == -1:
                         continue
@@ -40,7 +39,6 @@ class VisionToAction(Node):
                     metadata = data[:metadata_end].decode()
                     img_data = data[metadata_end + 1:]
                     
-                    # Parse metadata
                     width, height = map(int, metadata.split(','))
                     
                     # Decode image

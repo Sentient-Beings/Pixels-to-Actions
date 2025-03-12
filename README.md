@@ -1,16 +1,12 @@
-# 🤖 Robot Learning and Manipulation
+# 🤖 Pixels to Actions
 
-A repository for developing and testing robot learning algorithms, primarily focused on the UR5e robotic arm.
+In this project, the aim is to develop the pipeline to deploy and test different VLA models to control a robotic arm in MuJoCo Sim, to perform manipulation tasks.
 
-## Simulation Environments
-- **MuJoCo**: Physics-based robot simulation
-- **Gym**: Reinforcement learning environments
-- **Gazebo**: ROS2/MoveIt2 integration and testing
+Currently, i am not using the 'LeRobot' hugging face codebase. But I am planning to either create a separate project testing out the LeRobot or integrate it within this project.
 
-## Project Structure
-- Teleoperation scripts: `src/`
-- Robot model descriptions: `model/`
-- Learning algorithms: `robot_learning/`
+## Key elements of the Project
 
-## Setup
-Proper setup instructions will be provided soon.
+- Main simulation environemnt is MuJoCo
+- A ROS2 integration is also done where an in memory datastore like Redis is used to communicate Mujoco Sim with the ROS2 and Rviz2.
+- The robot can also be teleoperated or controlled using a VLA model.
+- The VLA inference script is inspired from the [NanoLLM](https://github.com/dusty-nv/NanoLLM/blob/main/nano_llm/vision/vla.py)

@@ -9,7 +9,7 @@ import robosuite as suite
 from   robosuite.controllers import load_composite_controller_config
 from   robosuite.utils.input_utils import *
 from   robosuite.utils.camera_utils import CameraMover
-from   vla_project.scripts.vla import VLAInference
+from   vla import VLAInference
 
 import xml.etree.ElementTree as ET
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', type=bool, default=False)
     args = parser.parse_args()
 
-    # Initialize VLA
+    # initialize the VLA model
     vla = VLAInference(model='openvla/openvla-7b')
     if not vla.check_server_connection():
         print("Cannot connect to VLA server. Exiting...")
@@ -137,17 +137,16 @@ if __name__ == "__main__":
         robot = env.robots[0]
         robot.print_action_info()
     
-    try:        
-        # Get the initial task instruction
+    try:
         task_instruction = args.prompt
         print(f"Starting task with instruction: {task_instruction}")
         
         while True:
-            # 1. Capture the latest camera image
+            # 1. capture the latest camera image
             raw_image = get_camera_image(env)
             
             try:
-                # 3. Get action prediction from VLA
+                # 2. get action prediction from VLA
                 action_space = vla.predict_action(
                     image=raw_image,
                     instruction=task_instruction

@@ -50,6 +50,7 @@ class JoystickController:
             y = -self.joystick.get_axis(1)
             z = -self.joystick.get_axis(3)
             
+            # deadzone is needed to avoid drift (or noise) in the joystick
             deadzone = 0.15
             scale = 0.5
             

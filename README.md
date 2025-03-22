@@ -10,3 +10,8 @@ Currently, i am not using the 'LeRobot' hugging face codebase. But I am planning
 - A ROS2 integration is also done where an in memory datastore like Redis is used to communicate Mujoco Sim with the ROS2 and Rviz2.
 - The robot can also be teleoperated or controlled using a VLA model.
 - The VLA inference script is inspired from the [NanoLLM](https://github.com/dusty-nv/NanoLLM/blob/main/nano_llm/vision/vla.py)
+
+### Scritps 
+- custom_teleop/src/ur5e_gripper_control : Teleoperation using an IK solver with a PS4 joystick controller
+- vla_project/scripts/teleop_joystick.py : Script to control robot arm using joystick 
+ 
